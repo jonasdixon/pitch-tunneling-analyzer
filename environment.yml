@@ -1,0 +1,20 @@
+name: tunneling
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - jupyter
+  - pandas
+  - numpy
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - pip
+  - pip:
+      - pybaseball>=2.2
+      - nbformat
+      - black
+      - isort
+      - flake8
+      - pre-commit
+      - nbstripout
