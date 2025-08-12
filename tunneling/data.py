@@ -1,13 +1,21 @@
 from __future__ import annotations
-from importlib import resources
+import io
+import pkgutil
+from pathlib import Path
+
 import pandas as pd
 
 
 def load_sample() -> pd.DataFrame:
     """
     Load a tiny, packaged CSV sample so users can run examples without any API calls.
-    Note: There is a reference to the top-level package ('tunneling') and then join 
-    the subpath, so there's no conflict with the module name 'tunneling.data'.
+
+    Uses pkgutil.get_data for maximum compatibility with editable installs.
+    Falls back to a filesystem path if the package isn't installed.
     """
-    with resources.files("tunneling").joinpath("data/sample_pitches.csv").open("rb") as f:
-        return pd.read_csv(f, parse_dates=["game_date"])
+    data = pkgutil.get_data("tunneling", "data/sample_pitches.csv")
+    if data is None:
+        # Fallback when running from source without installation
+        p = Path(__file__).parent / "data" / "sample_pitches.csv"
+        data = p.read_bytes()
+    return pd.read_csv(io.BytesIO(data), parse_dates=["game_date"])
