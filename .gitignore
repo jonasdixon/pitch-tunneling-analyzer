@@ -1,3 +1,12 @@
+# Project: raw/derived data stays local (Statcast terms; also ~90 MB per month)
+data/raw/*
+data/processed/*
+data/cache/
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+examples/out/
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
