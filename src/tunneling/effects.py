@@ -7,8 +7,16 @@ separation, plate separation and velocity difference?".
 
 Model: logistic regression with
   - cubic B-splines on each tunnel feature (continuous, not binned),
-  - a tensor-product spline surface on plate location,
+  - a tensor-product spline surface on plate location and a spline on signed distance to the zone
+    edge (so the model knows how close to the zone the pitch finished),
+  - a tensor-product spline on where the *current* pitch was at the commit point. Without it,
+    commit-point separation partly measures "the current pitch is at an unusual place" rather than
+    "the previous pitch was somewhere different", and the hitter reacts to the former directly,
   - a spline on release speed,
+  - the previous pitch's context: signed distance of its location to the zone edge and its result
+    (called strike, ball, whiff, foul, other). A hitter who just took a strike behaves differently
+    whatever the trajectories were, and without this the separation features partly stand in for
+    "where and how the last pitch ended",
   - one-hot current / previous pitch type, count, same-handed matchup, same-type flag,
   - a ridge-shrunk pitcher effect (columns scaled by `pitcher_scale`, which is a prior standard
     deviation of about that size on the logit scale).
@@ -81,6 +89,11 @@ class SplineLogit:
         self.sz = _spline(6, True).fit(np.clip(df["plate_z"], 0, 5).to_numpy().reshape(-1, 1))
         self.speed_bounds = tuple(np.nanpercentile(df["release_speed"], [1, 99]))
         self.speed_tf = _spline(4, False).fit(self._clip_speed(df).reshape(-1, 1))
+        self.edge_tf = _spline(8, False).fit(np.clip(df["edge_dist"], -0.8, 1.5).to_numpy().reshape(-1, 1))
+        self.pedge_tf = _spline(6, False).fit(np.clip(df["prev_edge_dist"], -0.8, 1.5).to_numpy().reshape(-1, 1))
+        self.results = ["called_strike", "ball", "whiff", "foul", "other"]
+        self.cx_tf = _spline(5, True).fit(np.clip(df["cur_commit_x_ft"], -3, 3).to_numpy().reshape(-1, 1))
+        self.cz_tf = _spline(5, True).fit(np.clip(df["cur_commit_z_ft"], 0, 8).to_numpy().reshape(-1, 1))
         top = df["pitch_type"].value_counts().index[:8]
         self.types = list(top)
         self.counts = sorted({f"{b}-{s}" for b, s in zip(df["balls"], df["strikes"], strict=True)})
@@ -111,6 +124,12 @@ class SplineLogit:
         bz = self.sz.transform(np.clip(df["plate_z"], 0, 5).to_numpy().reshape(-1, 1))
         add("location", (bx[:, :, None] * bz[:, None, :]).reshape(len(df), -1))
         add("speed", self.speed_tf.transform(self._clip_speed(df).reshape(-1, 1)))
+        add("edge", self.edge_tf.transform(np.clip(df["edge_dist"], -0.8, 1.5).to_numpy().reshape(-1, 1)))
+        cx = self.cx_tf.transform(np.clip(df["cur_commit_x_ft"], -3, 3).to_numpy().reshape(-1, 1))
+        cz = self.cz_tf.transform(np.clip(df["cur_commit_z_ft"], 0, 8).to_numpy().reshape(-1, 1))
+        add("commit_position", (cx[:, :, None] * cz[:, None, :]).reshape(len(df), -1))
+        add("prev_edge", self.pedge_tf.transform(np.clip(df["prev_edge_dist"], -0.8, 1.5).to_numpy().reshape(-1, 1)))
+        add("prev_result", self._onehot(df["prev_result"], self.results))
         add("cur_type", self._onehot(df["pitch_type"], self.types))
         add("prev_type", self._onehot(df["prev_pitch_type"], self.types))
         count = df["balls"].astype(int).astype(str) + "-" + df["strikes"].astype(int).astype(str)
@@ -216,12 +235,12 @@ def fit_effects(
         m = SplineLogit(**model_kwargs).fit(d, yb)
         return summarize(m, d)
 
-    results = Parallel(n_jobs=n_jobs)(delayed(boot)(seed + 1 + b) for b in range(n_boot))
-    boot_curves = {c: np.vstack([r[0][c] for r in results]) for c in TUNNEL_FEATURES}
+    results = Parallel(n_jobs=n_jobs)(delayed(boot)(seed + 1 + b) for b in range(n_boot)) if n_boot else []
+    boot_curves = {c: np.vstack([r[0][c] for r in results]) for c in TUNNEL_FEATURES} if results else {}
     rows = []
     for c in TUNNEL_FEATURES:
-        b = np.array([r[1][c][1] - r[1][c][0] for r in results])
         est = point_lohi[c][1] - point_lohi[c][0]
+        b = np.array([r[1][c][1] - r[1][c][0] for r in results]) if results else np.array([np.nan])
         rows.append({
             "outcome": outcome, "feature": c,
             "p10": points[c][0], "p90": points[c][1],

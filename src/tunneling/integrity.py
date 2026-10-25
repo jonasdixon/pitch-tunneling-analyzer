@@ -9,7 +9,7 @@ from tunneling.kinematics import KINEMATIC_COLS, reconstruction_error
 KEY = ["game_pk", "at_bat_number", "pitch_number"]
 SPEED_RANGE_MPH = (50.0, 106.0)  # a 125 mph reading is a tracking error, not a pitch
 PLATE_X_MAX_FT = 5.0
-PLATE_Z_RANGE_FT = (-1.0, 7.0)
+PLATE_Z_RANGE_FT = (-3.0, 7.0)  # balls in the dirt extrapolate below 0; they are real pitches
 RECON_TOLERANCE_IN = 2.0
 
 

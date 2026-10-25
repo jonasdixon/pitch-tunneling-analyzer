@@ -8,10 +8,12 @@ import pandas as pd
 from tunneling.kinematics import (
     DEFAULT_COMMIT_FT,
     KINEMATIC_COLS,
+    PLATE_FRONT_Y,
     pair_separation,
+    position_at_y,
     tunnel_ratio,
 )
-from tunneling.outcomes import add_outcome_flags, drop_non_competitive
+from tunneling.outcomes import add_outcome_flags, drop_non_competitive, edge_distance
 
 REQUIRED = [
     "game_pk", "at_bat_number", "pitch_number", "pitcher", "pitch_type", "release_speed",
@@ -19,6 +21,11 @@ REQUIRED = [
 ]
 LAG_COLS = ["pitch_type", "release_speed", "plate_x", "plate_z", "description", *KINEMATIC_COLS]
 PA_KEY = ["game_pk", "at_bat_number", "pitcher"]
+PREV_RESULT = {
+    "called_strike": "called_strike", "ball": "ball", "blocked_ball": "ball",
+    "swinging_strike": "whiff", "swinging_strike_blocked": "whiff", "missed_bunt": "whiff",
+    "foul": "foul", "foul_tip": "foul", "foul_bunt": "foul", "bunt_foul_tip": "foul",
+}
 
 
 def build_pairs(df: pd.DataFrame) -> pd.DataFrame:
@@ -63,6 +70,13 @@ def score_pairs(pairs: pd.DataFrame, commit_ft: float = DEFAULT_COMMIT_FT) -> pd
     out["tunnel_ratio"] = tunnel_ratio(out["commit_sep_in"], out["plate_sep_in"])
     out["velo_diff_mph"] = out["prev_release_speed"] - out["release_speed"]
     out["same_type"] = out["prev_pitch_type"] == out["pitch_type"]
+    out["edge_dist"] = edge_distance(out)
+    out["prev_edge_dist"] = edge_distance(
+        out.assign(plate_x=out["prev_plate_x"], plate_z=out["prev_plate_z"])
+    )
+    out["prev_result"] = out["prev_description"].map(PREV_RESULT).fillna("other")
+    cx, cz = position_at_y(cur, PLATE_FRONT_Y + commit_ft)
+    out["cur_commit_x_ft"], out["cur_commit_z_ft"] = cx, cz
 
     has2 = out["prev2_vx0"].notna()
     out["l2_commit_sep_in"] = np.nan

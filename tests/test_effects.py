@@ -18,6 +18,9 @@ def simulate(n=12_000, n_pitchers=60, seed=3):
     return pd.DataFrame({
         "pitcher": pitcher, "commit_sep_in": commit, "plate_sep_in": plate, "velo_diff_mph": velo,
         "plate_x": px, "plate_z": pz, "release_speed": 90 - velo / 2,
+        "edge_dist": rng.normal(0, 0.5, n), "cur_commit_x_ft": rng.normal(0, 0.6, n),
+        "cur_commit_z_ft": rng.normal(3.5, 0.6, n), "prev_edge_dist": rng.normal(0, 0.5, n),
+        "prev_result": rng.choice(["ball", "called_strike", "foul", "whiff", "other"], n),
         "pitch_type": rng.choice(["FF", "SL", "CH"], n), "prev_pitch_type": rng.choice(["FF", "SL"], n),
         "balls": rng.integers(0, 4, n), "strikes": rng.integers(0, 3, n),
         "stand": rng.choice(["L", "R"], n), "p_throws": "R", "same_type": rng.random(n) < 0.3,

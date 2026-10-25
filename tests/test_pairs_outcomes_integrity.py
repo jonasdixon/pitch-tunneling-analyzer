@@ -88,7 +88,7 @@ def test_integrity_rules_catch_planted_bugs():
     missing = pitch_row(n=4)
     missing["vx0"] = np.nan
     below = pitch_row(n=5)
-    below["plate_z"] = -3.0
+    below["plate_z"] = -9.0
     df = pd.DataFrame([good, dup, fast, flipped, missing, below])
     report = integrity_report(df)
     assert report["duplicate_key"] == 1

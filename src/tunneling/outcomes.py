@@ -40,6 +40,21 @@ def drop_non_competitive(df: pd.DataFrame, col: str = "description") -> pd.DataF
     return df.loc[~df[col].isin(NON_COMPETITIVE)]
 
 
+BALL_RADIUS_FT = 1.45 / 12.0
+
+
+def edge_distance(df: pd.DataFrame) -> np.ndarray:
+    """Signed distance (ft) from the pitch to the edge of the zone grown by one ball radius:
+    negative inside, positive outside (Euclidean near corners)."""
+    x, z = df["plate_x"].to_numpy(float), df["plate_z"].to_numpy(float)
+    top = df["sz_top"].to_numpy(float) + BALL_RADIUS_FT
+    bot = df["sz_bot"].to_numpy(float) - BALL_RADIUS_FT
+    dx = np.abs(x) - PLATE_HALF_WIDTH_FT
+    dz = np.maximum(z - top, bot - z)
+    outside = np.hypot(np.maximum(dx, 0.0), np.maximum(dz, 0.0))
+    return np.where((dx <= 0) & (dz <= 0), np.maximum(dx, dz), outside)
+
+
 def in_zone(df: pd.DataFrame) -> pd.Series:
     """Statcast zone 1-9 where it is recorded, otherwise the geometric zone from sz_bot/sz_top."""
     geometric = (
