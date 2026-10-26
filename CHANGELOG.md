@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- README chase finding had the sign backwards. Commit separation has a negative chase effect, so pitches
+  that looked like the previous pitch at the commit point are chased more.
+
+### Added
+- README states the model: penalised-spline logistic regression with a ridge-shrunk pitcher effect.
+
 ## [0.2.0]
 
 Rewrite. The measurements and the analysis changed, so old scores are not comparable.
