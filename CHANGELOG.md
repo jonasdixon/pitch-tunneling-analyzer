@@ -3,11 +3,16 @@
 ## [Unreleased]
 
 ### Fixed
-- README chase finding had the sign backwards. Commit separation has a negative chase effect, so pitches
-  that looked like the previous pitch at the commit point are chased more.
+- README chase finding had the sign backwards. The corrected direction matches the tunneling story:
+  pitches that looked like the previous pitch at the commit point, but finished far from it, are chased
+  more. (The placebo test, not the sign, is what rules out reading this as tunneling.)
+- README overstated the plate-location replication check as proof the rebuilt commit-point positions
+  are correct; reworded to describe it as a check on the plate end of the rebuild only.
 
 ### Added
 - README states the model: penalised-spline logistic regression with a ridge-shrunk pitcher effect.
+- README model paragraph now names previous pitch type, not just previous pitch result, among the
+  held-fixed covariates (the model already included it; the README did not say so).
 
 ## [0.2.0]
 
