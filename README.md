@@ -27,6 +27,16 @@ acceleration. The rebuilt location at the plate matches Statcast's reported loca
 The idea that tight commit-point tunnels produce more whiffs and strikes is **not supported** by
 this data once pitch type, location, count, the previous pitch and the pitcher are held fixed.
 
+**Model.** For each outcome (whiff, chase, CSW) I fit a penalised-spline logistic regression
+(`SplineLogit` in [`effects.py`](src/tunneling/effects.py)): a GAM-style model with cubic B-spline smooths
+on each tunnel feature, plate location, distance to the zone edge, release speed and the current pitch's
+commit-point position, plus pitch type, count, handedness and the previous pitch's result. Pitcher enters
+as a **ridge-shrunk random-intercept-style effect**: one column per pitcher, with a Gaussian prior
+(standard deviation 0.3 on the logit scale), not an unpenalised fixed effect. The prior scale is
+set, not estimated, and the spline smoothness comes from one fixed L2 penalty rather than REML as in `mgcv`.
+It is not a fitted mixed model, and there are no pitcher random slopes
+([why](docs/design_decisions.md)). Intervals come from a pitcher-cluster bootstrap.
+
 Each number is the change in a rate when a feature goes from its 10th to its 90th percentile for every
 pitch, everything else as observed (2023, with 95% intervals that resample pitchers). The right-hand
 column repeats the model using the pitch **two** back instead of the previous one, on the same rows.
@@ -48,8 +58,12 @@ If an effect belongs to adjacent-pitch tunneling, the middle column should be la
   number, so it reflects the current pitch being slower than earlier pitches, not the specific pitch
   just before. The one signal specific to the previous pitch points the wrong way: a larger plate
   separation from the previous pitch goes with 1 to 2 *fewer* points of whiff and CSW.
-- **Chases.** The association is large: pitches that finish far from the previous pitch and
-  looked unlike it at the commit point are chased more. But the placebo gives the same size, so it is not
+- **Chases.** The association is large, and its sign is the opposite of the tunneling story. Commit
+  separation is *negative* (-13.0): moving from the 10th to the 90th percentile of commit separation goes
+  with about 13 fewer chase points. So pitches that looked **like** the previous one at the commit point are
+  chased *more*, and pitches that looked unlike it are chased less. Plate separation is positive (+7.7):
+  pitches that finish farther from the previous pitch are chased more. The same signs hold in 2024 and in
+  the distance check. The placebo gives the same size, so it is not
   specific to the adjacent pitch. Something about where earlier pitches were is related to chasing; this
   analysis cannot say what, and it does not support reading it as tunneling.
 - **Prediction.** Fit on 2023 and scored on 2024, adding commit and plate separation changes held-out log
